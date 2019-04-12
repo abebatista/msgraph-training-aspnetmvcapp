@@ -71,5 +71,47 @@ namespace graph_tutorial.Helpers
                             new AuthenticationHeaderValue("Bearer", result.AccessToken);
                     }));
         }
+
+        public static async Task<IEnumerable<Event>> GetEventsAsyncFromUserIdToken(string signedInUserId, string token)
+        {
+            var graphClient = GetAuthenticatedClientFromUserIdToken(signedInUserId, token);
+
+            var events = await graphClient.Me.Events.Request()
+                .Select("subject,organizer,start,end")
+                .OrderBy("createdDateTime DESC")
+                .GetAsync();
+
+            return events.CurrentPage;
+        }
+
+        private static GraphServiceClient GetAuthenticatedClientFromUserIdToken(string signedInUserId, string token)
+        {
+            return new GraphServiceClient(
+                new DelegateAuthenticationProvider(
+                    async (requestMessage) =>
+                    {
+
+                        // Get the signed in user's id and create a token cache
+                        //string signedInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
+                        /*
+                        SessionTokenStore tokenStore = new SessionTokenStore(signedInUserId,
+                            new HttpContextWrapper(HttpContext.Current));
+
+                        var idClient = new ConfidentialClientApplication(
+                            appId, redirectUri, new ClientCredential(appSecret),
+                            tokenStore.GetMsalCacheInstance(), null);
+
+                        var accounts = await idClient.GetAccountsAsync();
+
+                        // By calling this here, the token can be refreshed
+                        // if it's expired right before the Graph call is made
+                        var result = await idClient.AcquireTokenSilentAsync(
+                            graphScopes.Split(' '), accounts.FirstOrDefault());
+                        */
+                        //result.AccessToken
+                        requestMessage.Headers.Authorization =
+                            new AuthenticationHeaderValue("Bearer", token);
+                    }));
+        }
     }
 }
